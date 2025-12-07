@@ -54,7 +54,7 @@ void print_set(UniversalSet* u_set) {
             if (i < u_set->data.pair_data.size - 1 ) {
                 printf ("(%d,%d), ", u_set->data.pair_data.pairs[i].first_num, u_set->data.pair_data.pairs[i].second_num); }
             else {
-                printf ("(%d,%d)\n", u_set->data.pair_data.pairs[i].first_num, u_set->data.pair_data.pairs[i].second_num); }
+                printf ("(%d,%d)", u_set->data.pair_data.pairs[i].first_num, u_set->data.pair_data.pairs[i].second_num); }
         };
     }
     printf("}\n");

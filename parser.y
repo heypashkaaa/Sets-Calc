@@ -16,6 +16,25 @@ struct Symbol {
 struct Symbol symbol_table[100];
 int symbol_count = 0;
 
+/* deep copy*/
+UniversalSet* create_copy(UniversalSet* source) {
+    if (source == NULL) return NULL;
+
+    UniversalSet* copy = malloc(sizeof(UniversalSet));
+
+    // Initialize the new set with the same type
+    init_universal_set(copy, source->type);
+
+    // Copy elements based on type
+    if (source->type == TYPE_INT_SET) {
+        for (int i = 0; i < source->data.int_data.size; i++) {
+            add_int(copy, source->data.int_data.elements[i]);
+        }
+    }
+
+    return copy;
+}
+
 /* Function to save or update a variable in the table */
 void save_variable(char* name, UniversalSet* set) {
     /* 1. Check if variable already exists to update it */
@@ -42,7 +61,6 @@ void save_variable(char* name, UniversalSet* set) {
 }
 
 /* Function to retrieve a variable from the table */
-/* MOVED OUTSIDE of save_variable (Fixed C syntax error) */
 UniversalSet* get_variable(char* name) {
     for(int i = 0; i < symbol_count; i++) {
         if (strcmp(symbol_table[i].name, name) == 0) {
@@ -75,9 +93,13 @@ void yyerror(char * s) {
 /* Keywords and Special Symbols */
 %token LET              /* Keyword "let" */
 %token EOL              /* End of Line (Enter key) */
+%token IF
+%token DO
+%token ELSE
+%token HELP
+%token EXIT
 
 /* Brackets and punctuation */
-/* Note: Assuming LSQUAREBRACE maps to '{' in lexer based on assignment example */
 %token LROUNDBRACE      /* ( */
 %token RROUNDBRACE      /* ) */
 %token LSQUAREBRACE     /* { */
@@ -130,6 +152,33 @@ statement:
         free($2); /* Free the name string copy */
     }
 
+    | IF LROUNDBRACE expression OP_EQUAL expression RROUNDBRACE DO expression ELSE expression {
+            bool result = is_equal($3, $5);
+            if (result) {
+                printf("= "); print_set($8);
+            } else {
+                printf("= "); print_set($10);
+            }
+            /* Cleanup: Free the condition sets ($3, $5) and both branch results ($8, $10) */
+            free_universal_set($3); free($3);
+            free_universal_set($5); free($5);
+            free_universal_set($8); free($8);
+            free_universal_set($10); free($10);
+        }
+
+        | IF LROUNDBRACE expression OP_NOTEQUAL expression RROUNDBRACE DO expression ELSE expression {
+            bool result = is_equal($3, $5);
+            if (!result) { // If NOT equal
+                printf("= "); print_set($8);
+            } else {
+                printf("= "); print_set($10);
+            }
+            free_universal_set($3); free($3);
+            free_universal_set($5); free($5);
+            free_universal_set($8); free($8);
+            free_universal_set($10); free($10);
+        }
+
     /* Just an expression: A + B (Print the result) */
     | expression {
         if ($1 != NULL) {
@@ -161,13 +210,38 @@ statement:
         free_universal_set($1); free($1);
         free_universal_set($3); free($3);
     }
+
+    | EXIT {
+            printf("You stopped the program!\n");
+            YYACCEPT; /* This stops yyparse() immediately */
+        }
+
+    | HELP {
+                printf("This is a set calculator\n");
+                printf("1. Assign:    let A = {1, 2}\n");
+                printf("2. Union:     A + B\n");
+                printf("3. Intersection: A ^ B\n");
+                printf("4. Difference:  A - B\n");
+                printf("5. Cartesian product: A x B\n");
+                printf("7. Equality/inequality test: A == B OR A != B\n");
+                printf("8. Check:     IF (A == B) DO ... ELSE ...\n");
+                printf("7. Quit:      exit OR quit\n");
+
+            }
 ;
 
 /* 3. Mathematical Expressions */
 expression:
     /* Variable usage: A */
     VAR_NAME {
-        $$ = get_variable($1);
+    UniversalSet* original = get_variable($1);
+
+            if (original != NULL) {
+                $$ = create_copy(original); /* We pass a deep copy up */
+            } else {
+                $$ = NULL;
+            }
+
         free($1);
     }
     /* Explicit set: {1, 2} */

@@ -1052,3 +1052,10 @@ dkms.conf
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+
+
+# Bison & Flex generated files
+lex.yy.c
+*.tab.c
+*.tab.h
+*.output
